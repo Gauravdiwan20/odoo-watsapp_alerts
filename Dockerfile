@@ -1,20 +1,18 @@
-# Use official Odoo 16 image
-FROM odoo:16.0
+# Use Odoo 16 image
+FROM odoo:16
 
-# Set environment variables
-ENV TWILIO_ACCOUNT_SID=$TWILIO_ACCOUNT_SID
-ENV TWILIO_AUTH_TOKEN=$TWILIO_AUTH_TOKEN
-ENV TWILIO_WHATSAPP_FROM=$TWILIO_WHATSAPP_FROM
-
-# Install Python dependencies (Twilio SDK)
 USER root
 RUN pip3 install twilio
 
-# Copy custom addons (if any)
+USER odoo
 COPY ./addons /mnt/extra-addons
 
-# Expose Odoo default port
-EXPOSE 8069
-
-# Start Odoo
-CMD ["odoo", "-d", "odoo", "--addons-path=/mnt/extra-addons", "--http-port=8069", "--without-demo=all"]
+# Start Odoo with your Render database credentials
+CMD ["odoo", 
+     "-d", "odoo_db_f5y5", 
+     "--db_host=dpg-d49kctemcj7s73ehsk30-a", 
+     "--db_port=5432", 
+     "--db_user=odoo_db_f5y5_user", 
+     "--db_password=HMjMgBtwx3Opv4iAJerbwTRGgphvtzqZ", 
+     "--http-port=8069", 
+     "--addons-path=/mnt/extra-addons"]
