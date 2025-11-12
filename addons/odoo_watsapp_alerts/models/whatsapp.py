@@ -1,20 +1,48 @@
+import os
 from odoo import models, fields, api
 from twilio.rest import Client
 
-class WhatsAppAlert(models.Model):
+
+class WhatsappAlert(models.Model):
     _name = 'whatsapp.alert'
-    _description = 'Send WhatsApp Alert using Twilio'
+    _description = 'Send WhatsApp alerts using Twilio'
 
-    name = fields.Char(string='Message')
-    phone_number = fields.Char(string='Phone Number')
+    name = fields.Char(string="Name", required=True)
+    phone = fields.Char(string="WhatsApp Number", required=True)
+    message = fields.Text(string="Message", required=True)
 
-    def send_whatsapp_message(self):
-        account_sid = "your_twilio_sid"
-        auth_token = "your_twilio_auth_token"
+    @api.model
+    def send_whatsapp_message(self, phone=None, message=None):
+        """
+        Send a WhatsApp message using Twilio API.
+        """
+        # 🔒 Load environment variables from Render (set in Render Dashboard)
+        account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+        auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+        from_whatsapp_number = f"whatsapp:{os.getenv('TWILIO_WHATSAPP_NUMBER')}"
+
+        if not all([account_sid, auth_token, from_whatsapp_number]):
+            raise ValueError("Twilio credentials are missing. Please check your Render environment variables.")
+
+        # Initialize Twilio client
         client = Client(account_sid, auth_token)
-        message = client.messages.create(
-            from_='whatsapp:+14155238886',  # Twilio Sandbox number
-            body=self.name,
-            to=f'whatsapp:{self.phone_number}'
+
+        # Ensure number is in WhatsApp format
+        if not phone.startswith('whatsapp:'):
+            phone = f'whatsapp:{phone}'
+
+        # Send message
+        message_sent = client.messages.create(
+            body=message,
+            from_=from_whatsapp_number,
+            to=phone
         )
-        return message.sid
+
+        # Log in Odoo chatter
+        self.env['mail.message'].create({
+            'body': f"✅ WhatsApp message sent to {phone}: {message}",
+            'model': self._name,
+            'res_id': self.id,
+        })
+
+        return message_sent.sid
